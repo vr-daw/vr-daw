@@ -3,8 +3,9 @@
             [spacetime.camera :refer [create-perspective-camera init-camera!]]
             [spacetime.controls.original :as controls]
             [spacetime.core :as spacetime]
-            [three]
-            ))
+            [cljsjs.three]
+            [mtl-loader]
+            [obj-loader]))
 
 (def request-id (atom nil))
 
@@ -28,6 +29,25 @@
         selected? false]
     (.position.set mesh x y z)
     (Sphere. geometry material mesh selected?)))
+
+(defn PianoLoader
+  [scene]
+  (let [mtlLoader (js/THREE.MTLLoader.)
+        onLoad (fn [materials]
+                 (let [_ (.preload materials)
+                       objLoader (js/THREE.OBJLoader.)]
+                   (doto objLoader
+                     (.setMaterials materials)
+                     (.setPath "assets/")
+                     (.load "pianorollshape.obj"
+                            (fn [object]
+                              (set! (.-position.z object) 1279)
+                              (.add scene object)
+                              )))))]
+    (doto mtlLoader
+      (.setBaseUrl  "assets/")
+      (.setPath "assets/")
+      (.load "pianorollshape.mtl" onLoad))))
 
 ;; because of the error
 ;;Caused by: clojure.lang.ExceptionInfo: No such namespace: three, could not locate three.cljs, three.cljc, or Closure namespace "three" in file out/spacetime/camera.cljs
@@ -67,17 +87,19 @@
         light  (js/THREE.HemisphereLight. 0xeeeeff 0x777788 0.75)
         red-sphere (sphere 200 1 1 1000)
         ]
-    ;;(.add scene skybox)
-    (.add scene (.-mesh red-sphere))
+    (.add scene skybox)
+    ;; add the piano roll
+    (PianoLoader scene)
+    ;;(.add scene (.-mesh red-sphere))
     (spacetime/window-resize! renderer camera)
-    ;;(js/THREEx.WindowResize renderer camera)
+    (js/THREEx.WindowResize renderer camera)
     ;;(.appendChild container (.-domElement stats))
-    ;;(.bindKey js/THREEx.FullScreen (js-obj "charCode" (.charCodeAt "m" 0)))
+    (.bindKey js/THREEx.FullScreen (js-obj "charCode" (.charCodeAt "m" 0)))
     (spacetime/fullscreen!)
     (spacetime/start-time-frame-loop (fn [delta-t]
-                             (do (render)
-                                 (controls/controls-handler camera)))
-                           request-id)
+                                       (do (render)
+                                           (controls/controls-handler camera)))
+                                     request-id)
     ;; add listeners for key events
     (js/addEventListener "keydown" controls/game-key-down! true)
     (js/addEventListener "keyup"   controls/game-key-up!   true)))

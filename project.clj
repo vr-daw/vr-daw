@@ -5,7 +5,8 @@
                  [spacetime "0.2.0-SNAPSHOT"]]
   ;; :jvm-opts ^:replace ["-Xmx1g" "-server"]
   :plugins [[lein-npm "0.6.1"]
-            [lein-cljsbuild "1.1.2"]]
+            [lein-cljsbuild "1.1.2"]
+            [lein-externs "0.1.5"]]
   :npm {:dependencies [[source-map-support "0.4.0"]]}
   :source-paths ["src" "target/classes"]
   :clean-targets ["out" "release"]
@@ -24,5 +25,6 @@
                                    :main vr-daw.core
                                    :output-to "release/vr_daw.min.js"
                                    :optimizations :advanced
-                                   :pretty-print false}}]}
+                                   :pretty-print false
+                                   :externs ["js/vr_daw_externs.js"]}}]}
   :target-path "target")

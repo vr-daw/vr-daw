@@ -20,3 +20,4 @@ profiles.clj
 resources/js/.nrepl-history
 out-adv/*
 out/*
+checkouts/
