@@ -84,10 +84,14 @@
                                       (js-obj "color" 0x063140
                                               "side" js/THREE.BackSide))]
                  (js/THREE.Mesh. skybox-geometry skybox-material))
-        light  (js/THREE.HemisphereLight. 0xeeeeff 0x777788 0.75)
-        red-sphere (sphere 200 1 1 1000)
-        ]
+        ;;light  (js/THREE.HemisphereLight. 0xeeeeff 1.0 )
+        light (js/THREE.DirectionalLight. 0xffeedd)
+        ;;light (js/THREE.AmbientLight. 0xeeeeff)
+        red-sphere (sphere 200 1 1 1000)]
     (.add scene skybox)
+    (doto light
+      (.position.set 0 0 1))
+    (.add scene light)
     ;; add the piano roll
     (PianoLoader scene)
     ;;(.add scene (.-mesh red-sphere))
