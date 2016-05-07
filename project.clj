@@ -2,6 +2,8 @@
   :description "A 3D Digital Audio Workspace"
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [org.clojure/clojurescript "1.8.51"]
+                 [thi.ng/geom "0.0.908"]
+                 [weasel "0.7.0" :exclusions [org.clojure/clojurescript]]
                  [spacetime "0.2.0-SNAPSHOT"]]
   ;; :jvm-opts ^:replace ["-Xmx1g" "-server"]
   :plugins [[lein-npm "0.6.1"]

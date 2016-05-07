@@ -1,9 +1,9 @@
 (ns vr-daw.core
-  (:require [clojure.browser.repl :as repl]
-            [spacetime.camera :refer [create-perspective-camera init-camera!]]
+  (:require [spacetime.camera :refer [create-perspective-camera init-camera!]]
             [spacetime.controls.original :as controls]
             [spacetime.core :as spacetime]
             [cljsjs.three]
+            [weasel.repl :as repl]
             [mtl-loader]
             [obj-loader]))
 
@@ -17,8 +17,8 @@
   ;; specify the new color using hexadecial notation
   (change-color [this color]
     (.material.color.set this color)))
-
 (defn sphere
+
   "Create a sphere with initial coordinates x,y,z and radius."
   [x y z radius]
   (let [geometry (js/THREE.SphereGeometry. radius 32 16)
@@ -48,6 +48,12 @@
       (.setBaseUrl  "assets/")
       (.setPath "assets/")
       (.load "pianorollshape.mtl" onLoad))))
+
+(defn diamond-floor
+  [scene]
+  (let [geometry (js/THREE.PlaneGeometry. 2000 2000 100 100)
+        _ (.rotateX geometry (- (/ js/Math.PI 2)))]
+    geometry))
 
 ;; because of the error
 ;;Caused by: clojure.lang.ExceptionInfo: No such namespace: three, could not locate three.cljs, three.cljc, or Closure namespace "three" in file out/spacetime/camera.cljs
@@ -107,3 +113,6 @@
     ;; add listeners for key events
     (js/addEventListener "keydown" controls/game-key-down! true)
     (js/addEventListener "keyup"   controls/game-key-up!   true)))
+
+(when-not (repl/alive?)
+  (repl/connect "ws://127.0.0.1:9001"))
