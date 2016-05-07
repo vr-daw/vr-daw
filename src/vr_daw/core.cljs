@@ -49,21 +49,50 @@
       (.setPath "assets/")
       (.load "pianorollshape.mtl" onLoad))))
 
+(deftype ThreeObject
+    [geometry material mesh])
+
 (defn diamond-floor
   [scene]
   (let [geometry (js/THREE.PlaneGeometry. 2000 2000 100 100)
-        _ (.rotateX geometry (- (/ js/Math.PI 2)))]
-    geometry))
+        _ (.rotateX geometry (- (/ js/Math.PI 2)))
+        _ (doall
+           (map #(do (aset % "x" (+ (- (* (js/Math.random) 20) 10)
+                                    (aget % "x")))
+                     (aset % "y" (+ (* (js/Math.random) 2)
+                                    (aget % "y")))
+                     (aset % "z" (+ (- (* (js/Math.random) 20) 10)
+                                    (aget % "z"))))
+                (.-vertices geometry)))
+        color (fn [] (let [color (js/THREE.Color.)]
+                       (.setHSL color
+                                (+ (* (js/Math.random) 0.3) 0.5)
+                                0.75
+                                (+ (* (js/Math.random) 0.25) 0.75))
+                       color))
+        _ (doall
+           (map #(do (aset (.-vertexColors %) 0
+                           (color))
+                     (aset (.-vertexColors %) 1
+                           (color))
+                     (aset (.-vertexColors %) 2
+                           (color)))
+                (.-faces geometry)))
+        material (js/THREE.MeshBasicMaterial.
+                  (clj->js
+                   {:vertexColors js/THREE.VertexColors}))
+        mesh (js/THREE.Mesh. geometry material)]
+    (ThreeObject. geometry material mesh)))
 
 ;; because of the error
 ;;Caused by: clojure.lang.ExceptionInfo: No such namespace: three, could not locate three.cljs, three.cljc, or Closure namespace "three" in file out/spacetime/camera.cljs
 ;; we need to be properly packaging the foreign dependecies
 ;; https://github.com/clojure/clojurescript/wiki/Packaging-Foreign-Dependencies
 ;; however, in the future a cljsjs should be made for THREE and the supporting libs we use for it
+(def scene (spacetime/create-scene))
 
 (defn ^:export init []
-  (let [scene (spacetime/create-scene)
-        camera (init-camera! (create-perspective-camera
+  (let [camera (init-camera! (create-perspective-camera
                               45
                               (/ (.-innerWidth js/window)
                                  (.-innerHeight js/window))
@@ -94,6 +123,7 @@
         light (js/THREE.DirectionalLight. 0xffeedd)
         ;;light (js/THREE.AmbientLight. 0xeeeeff)
         red-sphere (sphere 200 1 1 1000)]
+    (.add scene (.-mesh (diamond-floor nil)))
     (.add scene skybox)
     (doto light
       (.position.set 0 0 1))
