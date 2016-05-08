@@ -41,7 +41,10 @@
                      (.setPath "assets/")
                      (.load "pianorollshape.obj"
                             (fn [object]
-                              (set! (.-position.z object) 1279)
+                              (set! (.-position.z object) -7)
+                              (set! (.-position.y object) 7)
+                              ;;(set! (.-position.y object) 10)
+                              ;;(.position.set object [0 0 100])
                               (.add scene object)
                               )))))]
     (doto mtlLoader
@@ -91,16 +94,18 @@
 ;; however, in the future a cljsjs should be made for THREE and the supporting libs we use for it
 (def scene (spacetime/create-scene))
 
+(aset scene "fog" (THREE.Fog. 0xffffff 0 750))
+
+(def camera (init-camera! (create-perspective-camera
+                           75
+                           (/ (.-innerWidth js/window)
+                              (.-innerHeight js/window))
+                           1
+                           1000)
+                          scene
+                          [0 0 0]))
 (defn ^:export init []
-  (let [camera (init-camera! (create-perspective-camera
-                              45
-                              (/ (.-innerWidth js/window)
-                                 (.-innerHeight js/window))
-                              0.1
-                              20000)
-                             scene
-                             [0 0 1300])
-        renderer (spacetime/create-renderer)
+  (let [renderer (spacetime/create-renderer)
         render (spacetime/render renderer scene camera)
         container (-> js/document
                       (.getElementById "ThreeJS"))
