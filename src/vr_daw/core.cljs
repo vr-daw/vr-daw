@@ -104,6 +104,8 @@
                            1000)
                           scene
                           [0 0 0]))
+(def pointer-lock-controls (spacetime/pointer-lock-controls camera))
+
 (defn ^:export init []
   (let [renderer (spacetime/create-renderer)
         render (spacetime/render renderer scene camera)
@@ -116,7 +118,7 @@
                                    .-body
                                    ;; we should stub this out for webkit and moz
                                    (.requestPointerLock))))
-        pointer-lock-controls (spacetime/pointer-lock-controls camera)
+        ;;pointer-lock-controls (spacetime/pointer-lock-controls camera)
         _ (.add scene (.getObject pointer-lock-controls))
         _ (spacetime/pointer-lock-listener! js/document pointer-lock-controls)
         skybox (let [skybox-geometry (spacetime/create-box-geometry 20000 20000 20000)
@@ -143,7 +145,15 @@
     (spacetime/fullscreen!)
     (spacetime/start-time-frame-loop (fn [delta-t]
                                        (do (render)
-                                           (controls/controls-handler camera)))
+                                           (controls/controls-handler
+                                            #(spacetime/translate-controls! pointer-lock-controls
+                                                                            [-1 0 0])
+                                            #(spacetime/translate-controls! pointer-lock-controls
+                                                                            [0 0 -1])
+                                            #(spacetime/translate-controls! pointer-lock-controls
+                                                                            [1 0 0])
+                                            #(spacetime/translate-controls! pointer-lock-controls
+                                                                            [0 0 1]))))
                                      request-id)
     ;; add listeners for key events
     (js/addEventListener "keydown" controls/game-key-down! true)
