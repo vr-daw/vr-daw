@@ -143,18 +143,42 @@
     ;;(.appendChild container (.-domElement stats))
     (.bindKey js/THREEx.FullScreen (js-obj "charCode" (.charCodeAt "m" 0)))
     (spacetime/fullscreen!)
-    (spacetime/start-time-frame-loop (fn [delta-t]
-                                       (do (render)
-                                           (controls/controls-handler
-                                            #(spacetime/translate-controls! pointer-lock-controls
-                                                                            [-1 0 0])
-                                            #(spacetime/translate-controls! pointer-lock-controls
-                                                                            [0 0 -1])
-                                            #(spacetime/translate-controls! pointer-lock-controls
-                                                                            [1 0 0])
-                                            #(spacetime/translate-controls! pointer-lock-controls
-                                                                            [0 0 1]))))
-                                     request-id)
+    (spacetime/start-time-frame-loop
+     (fn [delta-t]
+       (let [height 10
+             position-y (nth (spacetime/get-position
+                              pointer-lock-controls)
+                             1)
+             gravity     (*  -9.8 (/ delta-t 1000) 10)
+             jump-height  100
+             ]
+         (render)
+         (controls/controls-handler
+          #(spacetime/translate-controls! pointer-lock-controls
+                                          [-1 0 0])
+          #(spacetime/translate-controls! pointer-lock-controls
+                                          [0 0 -1])
+          #(spacetime/translate-controls! pointer-lock-controls
+                                          [1 0 0])
+          #(spacetime/translate-controls! pointer-lock-controls
+                                          [0 0 1])
+          #(spacetime/translate-controls! pointer-lock-controls
+                                          [0
+                                           (if (<= position-y
+                                                   height)
+                                             jump-height
+                                             0)
+                                           0]))
+         ;; gravity
+         (spacetime/translate-controls!
+          pointer-lock-controls
+          [0 (if (<= position-y
+                     height)
+               0
+               gravity)
+           0])
+         ))
+     request-id)
     ;; add listeners for key events
     (js/addEventListener "keydown" controls/game-key-down! true)
     (js/addEventListener "keyup"   controls/game-key-up!   true)))
