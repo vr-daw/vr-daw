@@ -144,40 +144,48 @@
     (.bindKey js/THREEx.FullScreen (js-obj "charCode" (.charCodeAt "m" 0)))
     (spacetime/fullscreen!)
     (spacetime/start-time-frame-loop
-     (fn [delta-t]
-       (let [height 10
-             position-y (nth (spacetime/get-position
-                              pointer-lock-controls)
-                             1)
-             gravity     (*  -9.8 (/ delta-t 1000) 10)
-             jump-height  100
-             ]
-         (render)
-         (controls/controls-handler
-          #(spacetime/translate-controls! pointer-lock-controls
-                                          [-1 0 0])
-          #(spacetime/translate-controls! pointer-lock-controls
-                                          [0 0 -1])
-          #(spacetime/translate-controls! pointer-lock-controls
-                                          [1 0 0])
-          #(spacetime/translate-controls! pointer-lock-controls
-                                          [0 0 1])
-          #(spacetime/translate-controls! pointer-lock-controls
+     (let [velocity-y (atom 0)
+           can-jump (atom true)]
+       (fn [delta-t]
+         (let [height 10
+               position-y (nth (spacetime/get-position
+                                pointer-lock-controls)
+                               1)
+               gravity     (*  -9.8 (/ delta-t 1000) 10)
+               jump-max  60
+               ]
+           ;; gravity
+           (swap! velocity-y (fn [x] (+ x (* -9.8 1))))
+           (render)
+           (controls/controls-handler
+            #(spacetime/translate-controls! pointer-lock-controls
+                                            [-1 0 0])
+            #(spacetime/translate-controls! pointer-lock-controls
+                                            [0 0 -1])
+            #(spacetime/translate-controls! pointer-lock-controls
+                                            [1 0 0])
+            #(spacetime/translate-controls! pointer-lock-controls
+                                            [0 0 1])
+            ;; jump!
+            #(when can-jump
+               (swap! velocity-y (partial + 20))
+               (reset! can-jump false)))
+           ;; gravity
+           (.log js/console @velocity-y)
+           (spacetime/translate-controls! pointer-lock-controls
                                           [0
-                                           (if (<= position-y
-                                                   height)
-                                             jump-height
-                                             0)
-                                           0]))
-         ;; gravity
-         (spacetime/translate-controls!
-          pointer-lock-controls
-          [0 (if (<= position-y
+                                           @velocity-y
+                                           0])
+           ;; floor check
+           (when (<= (second (spacetime/get-position pointer-lock-controls))
                      height)
-               0
-               gravity)
-           0])
-         ))
+             (spacetime/set-position!
+              pointer-lock-controls
+              [(nth (spacetime/get-position pointer-lock-controls) 0)
+               height
+               (nth (spacetime/get-position pointer-lock-controls) 2)])
+             (reset! velocity-y 0)
+             (reset! can-jump true)))))
      request-id)
     ;; add listeners for key events
     (js/addEventListener "keydown" controls/game-key-down! true)
