@@ -151,11 +151,8 @@
                position-y (nth (spacetime/get-position
                                 pointer-lock-controls)
                                1)
-               gravity     (*  -9.8 (/ delta-t 1000) 10)
                jump-max  60
                ]
-           ;; gravity
-           (swap! velocity-y (fn [x] (+ x (* -9.8 1))))
            (render)
            (controls/controls-handler
             #(spacetime/translate-controls! pointer-lock-controls
@@ -167,8 +164,8 @@
             #(spacetime/translate-controls! pointer-lock-controls
                                             [0 0 1])
             ;; jump!
-            #(when can-jump
-               (swap! velocity-y (partial + 20))
+            #(when @can-jump
+               (swap! velocity-y (partial + 3))
                (reset! can-jump false)))
            ;; gravity
            (.log js/console @velocity-y)
@@ -176,6 +173,8 @@
                                           [0
                                            @velocity-y
                                            0])
+           ;; gravity
+           (swap! velocity-y (fn [x] (+ x (* -9.8 (/ delta-t 1000)))))
            ;; floor check
            (when (<= (second (spacetime/get-position pointer-lock-controls))
                      height)
