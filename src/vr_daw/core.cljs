@@ -2,12 +2,19 @@
   (:require [spacetime.camera :refer [create-perspective-camera init-camera!]]
             [spacetime.controls.original :as controls]
             [spacetime.core :as spacetime]
+            [reagent.core :as r]
+            [vr-daw.components :refer [PauseComponent]]
             [cljsjs.three]
             [weasel.repl :as repl]
             [mtl-loader]
             [obj-loader]))
 
-(def request-id (atom nil))
+(def state (r/atom {:request-id nil
+                    :velocity-y 0
+                    :can-jump false
+                    :paused? true}))
+
+(def request-id (r/cursor state [:request-id]))
 
 ;; (defonce conn
 ;;   (repl/connect "http://localhost:9000/repl"))
@@ -104,6 +111,7 @@
                            1000)
                           scene
                           [0 0 0]))
+
 (def pointer-lock-controls (spacetime/pointer-lock-controls camera))
 
 (defn ^:export init []
@@ -123,7 +131,7 @@
         _ (spacetime/pointer-lock-listener! js/document pointer-lock-controls)
         skybox (let [skybox-geometry (spacetime/create-box-geometry 20000 20000 20000)
                      skybox-material (spacetime/create-mesh-basic-material
-                                      (js-obj "color" 0x063140
+                                      (js-obj "color" 0x0000ff;;0x063140
                                               "side" js/THREE.BackSide))]
                  (js/THREE.Mesh. skybox-geometry skybox-material))
         ;;light  (js/THREE.HemisphereLight. 0xeeeeff 1.0 )
@@ -144,8 +152,8 @@
     (.bindKey js/THREEx.FullScreen (js-obj "charCode" (.charCodeAt "m" 0)))
     (spacetime/fullscreen!)
     (spacetime/start-time-frame-loop
-     (let [velocity-y (atom 0)
-           can-jump (atom true)]
+     (let [velocity-y (r/cursor state [:velocity-y])
+           can-jump (r/cursor state [:can-jump])]
        (fn [delta-t]
          (let [height 10
                position-y (nth (spacetime/get-position
@@ -168,7 +176,6 @@
                (swap! velocity-y (partial + 3))
                (reset! can-jump false)))
            ;; gravity
-           (.log js/console @velocity-y)
            (spacetime/translate-controls! pointer-lock-controls
                                           [0
                                            @velocity-y
@@ -185,10 +192,14 @@
                (nth (spacetime/get-position pointer-lock-controls) 2)])
              (reset! velocity-y 0)
              (reset! can-jump true)))))
-     request-id)
+     (r/cursor state [:request-id]))
     ;; add listeners for key events
     (js/addEventListener "keydown" controls/game-key-down! true)
-    (js/addEventListener "keyup"   controls/game-key-up!   true)))
+    (js/addEventListener "keyup"   controls/game-key-up!   true)
+    ;; add Reagent
+    (r/render-component [PauseComponent {:paused? (r/cursor state [:paused?])}]
+                        (.getElementById js/document "reagent-app"))))
 
 (when-not (repl/alive?)
   (repl/connect "ws://127.0.0.1:9001"))
+
