@@ -3,11 +3,14 @@
 
 (defn PauseComponent
   "Props is:
-  {:paused? ; r/atom boolean}
+  {:paused? ; r/atom boolean
+  :on-click ; fn
+  }
   "
   [props]
   (fn [props]
-    (let [{:keys [paused?]} props
+    (let [{:keys [paused?
+                  on-click]} props
           merge-block (if @paused?
                         {}
                         {:display "none"})]
@@ -27,7 +30,7 @@
                              :color "#ffffff"
                              :text-align "center"
                              :cursor "pointer"})
-              :on-click #(swap! paused? not)}
+              :on-click on-click}
         [:span {:style {:font-size "40px"}}
          "Click to play"]
         [:br]

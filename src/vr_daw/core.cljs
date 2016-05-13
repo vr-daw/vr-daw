@@ -128,7 +128,11 @@
                                    (.requestPointerLock))))
         ;;pointer-lock-controls (spacetime/pointer-lock-controls camera)
         _ (.add scene (.getObject pointer-lock-controls))
-        _ (spacetime/pointer-lock-listener! js/document pointer-lock-controls)
+        _ (spacetime/pointer-lock-change-listener!
+           js/document
+           (fn [event]
+             (.log js/console event)
+             (set! (.-enabled pointer-lock-controls) true)))
         skybox (let [skybox-geometry (spacetime/create-box-geometry 20000 20000 20000)
                      skybox-material (spacetime/create-mesh-basic-material
                                       (js-obj "color" 0x0000ff;;0x063140
@@ -197,8 +201,15 @@
     (js/addEventListener "keydown" controls/game-key-down! true)
     (js/addEventListener "keyup"   controls/game-key-up!   true)
     ;; add Reagent
-    (r/render-component [PauseComponent {:paused? (r/cursor state [:paused?])}]
-                        (.getElementById js/document "reagent-app"))))
+    (r/render-component
+     [PauseComponent
+      {:paused? (r/cursor state [:paused?])
+       :on-click (fn [event]
+                   (swap! (r/cursor state [:paused?]) not)
+                   (if @(r/cursor state [:paused?])
+                     (set! (.-enabled pointer-lock-controls) true)
+                     (set! (.-enabled pointer-lock-controls) false)))}]
+     (.getElementById js/document "reagent-app"))))
 
 (when-not (repl/alive?)
   (repl/connect "ws://127.0.0.1:9001"))
