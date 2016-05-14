@@ -131,8 +131,19 @@
         _ (spacetime/pointer-lock-change-listener!
            js/document
            (fn [event]
-             (.log js/console event)
-             (set! (.-enabled pointer-lock-controls) true)))
+             (let [element (.-body js/document)
+                   has-pointerlock
+                   (or (= js/document.pointerLockElement element)
+                       (= js/document.mozPointerLockElement element)
+                       (= js/document.webkitPointerLockElement element))]
+               (when has-pointerlock
+                 (.log js/console "pointerlock is in body")
+                 (aset pointer-lock-controls "enabled" true)
+                 (reset! (r/cursor state [:paused?]) false))
+               (when-not has-pointerlock
+                 (.log js/console "pointerlock is not in body")
+                 (aset pointer-lock-controls "enabled" false)
+                 (reset! (r/cursor state [:paused?]) true)))))
         skybox (let [skybox-geometry (spacetime/create-box-geometry 20000 20000 20000)
                      skybox-material (spacetime/create-mesh-basic-material
                                       (js-obj "color" 0x0000ff;;0x063140
@@ -164,38 +175,41 @@
                                 pointer-lock-controls)
                                1)
                jump-max  60
+               paused? (r/cursor state [:paused?])
                ]
            (render)
-           (controls/controls-handler
-            #(spacetime/translate-controls! pointer-lock-controls
-                                            [-1 0 0])
-            #(spacetime/translate-controls! pointer-lock-controls
-                                            [0 0 -1])
-            #(spacetime/translate-controls! pointer-lock-controls
-                                            [1 0 0])
-            #(spacetime/translate-controls! pointer-lock-controls
-                                            [0 0 1])
-            ;; jump!
-            #(when @can-jump
-               (swap! velocity-y (partial + 3))
-               (reset! can-jump false)))
-           ;; gravity
-           (spacetime/translate-controls! pointer-lock-controls
-                                          [0
-                                           @velocity-y
-                                           0])
-           ;; gravity
-           (swap! velocity-y (fn [x] (+ x (* -9.8 (/ delta-t 1000)))))
-           ;; floor check
-           (when (<= (second (spacetime/get-position pointer-lock-controls))
-                     height)
-             (spacetime/set-position!
-              pointer-lock-controls
-              [(nth (spacetime/get-position pointer-lock-controls) 0)
-               height
-               (nth (spacetime/get-position pointer-lock-controls) 2)])
-             (reset! velocity-y 0)
-             (reset! can-jump true)))))
+           (when-not @paused?
+             (.log js/console "I'm not paused")
+             (controls/controls-handler
+              #(spacetime/translate-controls! pointer-lock-controls
+                                              [-1 0 0])
+              #(spacetime/translate-controls! pointer-lock-controls
+                                              [0 0 -1])
+              #(spacetime/translate-controls! pointer-lock-controls
+                                              [1 0 0])
+              #(spacetime/translate-controls! pointer-lock-controls
+                                              [0 0 1])
+              ;; jump!
+              #(when @can-jump
+                 (swap! velocity-y (partial + 3))
+                 (reset! can-jump false)))
+             ;; gravity
+             (spacetime/translate-controls! pointer-lock-controls
+                                            [0
+                                             @velocity-y
+                                             0])
+             ;; gravity
+             (swap! velocity-y (fn [x] (+ x (* -9.8 (/ delta-t 1000)))))
+             ;; floor check
+             (when (<= (second (spacetime/get-position pointer-lock-controls))
+                       height)
+               (spacetime/set-position!
+                pointer-lock-controls
+                [(nth (spacetime/get-position pointer-lock-controls) 0)
+                 height
+                 (nth (spacetime/get-position pointer-lock-controls) 2)])
+               (reset! velocity-y 0)
+               (reset! can-jump true))))))
      (r/cursor state [:request-id]))
     ;; add listeners for key events
     (js/addEventListener "keydown" controls/game-key-down! true)
@@ -205,10 +219,10 @@
      [PauseComponent
       {:paused? (r/cursor state [:paused?])
        :on-click (fn [event]
-                   (swap! (r/cursor state [:paused?]) not)
-                   (if @(r/cursor state [:paused?])
-                     (set! (.-enabled pointer-lock-controls) true)
-                     (set! (.-enabled pointer-lock-controls) false)))}]
+                   (-> (.-body js/document)
+                       (.requestPointerLock))
+                   (reset! (r/cursor state [:paused?]) false)
+                   (aset pointer-lock-controls "enabled" true))}]
      (.getElementById js/document "reagent-app"))))
 
 (when-not (repl/alive?)
