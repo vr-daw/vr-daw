@@ -10,26 +10,15 @@
   [props]
   (fn [props]
     (let [{:keys [paused?
-                  on-click]} props
-          merge-block (if @paused?
-                        {}
-                        {:display "none"})]
+                  on-click]} props]
       [:div {:id "blocker"
-             :style (merge merge-block
-                           {:position "absolute"
-                            :width "100%"
-                            :height "100%"
-                            :background-color "rgba(0,0,0,0.5)"})}
+             :style (if @paused?
+                      {}
+                      {:display "none"})}
        [:div {:id "instructions"
-              :style (merge merge-block
-                            {:width "100%"
-                             :height "100%"
-                             :display "box"
-                             :box-orient "horizontal"
-                             :box-align "center"
-                             :color "#ffffff"
-                             :text-align "center"
-                             :cursor "pointer"})
+              :style (if @paused?
+                       {}
+                       {:display "none"})
               :on-click on-click}
         [:span {:style {:font-size "40px"}}
          "Click to play"]
