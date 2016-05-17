@@ -137,7 +137,7 @@
 ;; however, in the future a cljsjs should be made for THREE and the supporting libs we use for it
 (def scene (spacetime/create-scene))
 
-(aset scene "fog" (THREE.Fog. 0xffffff 0 750))
+(aset scene "fog" (THREE.Fog. 0xffffff 1 750))
 
 (def camera (init-camera! (create-perspective-camera
                            75
@@ -153,6 +153,7 @@
 (defn ^:export init []
   (let [renderer (spacetime/create-renderer)
         render (spacetime/render renderer scene camera)
+        _ (.setClearColor renderer 0xffffff)
         container (-> js/document
                       (.getElementById "ThreeJS"))
         _ (spacetime/attach-renderer! renderer container)
