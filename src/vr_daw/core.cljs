@@ -3,6 +3,7 @@
             [spacetime.controls.original :as controls]
             [spacetime.core :as spacetime]
             [reagent.core :as r]
+            [reagent.interop :refer-macros [$]]
             [vr-daw.components :refer [PauseComponent]]
             [cljsjs.three]
             [weasel.repl :as repl]
@@ -24,8 +25,8 @@
   ;; specify the new color using hexadecial notation
   (change-color [this color]
     (.material.color.set this color)))
-(defn sphere
 
+(defn sphere
   "Create a sphere with initial coordinates x,y,z and radius."
   [x y z radius]
   (let [geometry (js/THREE.SphereGeometry. radius 32 16)
@@ -59,8 +60,18 @@
       (.setPath "assets/")
       (.load "pianorollshape.mtl" onLoad))))
 
+
 (deftype ThreeObject
     [geometry material mesh])
+
+(defn diamond-color
+  []
+  (let [color (js/THREE.Color.)]
+    (.setHSL color
+             (+ (* (js/Math.random) 0.3) 0.5)
+             0.75
+             (+ (* (js/Math.random) 0.25) 0.75))
+    color))
 
 (defn diamond-floor
   [scene]
@@ -92,6 +103,31 @@
                   (clj->js
                    {:vertexColors js/THREE.VertexColors}))
         mesh (js/THREE.Mesh. geometry material)]
+    (ThreeObject. geometry material mesh)))
+
+(defn diamond-box
+  []
+  (let [geometry (js/THREE.BoxGeometry. 20 20 20)
+        _ (doall
+           (map #(do (aset (.-vertexColors %) 0
+                           (diamond-color))
+                     (aset (.-vertexColors %) 1
+                           (diamond-color))
+                     (aset (.-vertexColors %) 2
+                           (diamond-color))
+                     (.log js/console "I set a color")
+                     )
+                (.-faces geometry)))
+        material (js/THREE.MeshPhongMaterial. (clj->js
+                                               {:specular 0xffffff
+                                                :shading THREE.FlatShading
+                                                :vertexColors THREE.VertexColors}))
+        mesh (js/THREE.Mesh. geometry material)]
+    (.color.setHSL material
+                   (+ (* (js/Math.random) 0.3) 0.5)
+                   0.75
+                   (+ (* (js/Math.random) 0.25) 0.75))
+    (.position.set mesh 0 10 0)
     (ThreeObject. geometry material mesh)))
 
 ;; because of the error
@@ -149,11 +185,13 @@
                                       (js-obj "color" 0x0000ff;;0x063140
                                               "side" js/THREE.BackSide))]
                  (js/THREE.Mesh. skybox-geometry skybox-material))
-        ;;light  (js/THREE.HemisphereLight. 0xeeeeff 1.0 )
-        light (js/THREE.DirectionalLight. 0xffeedd)
+        light  (js/THREE.HemisphereLight. 0xeeeeff 0x777788 0.75)
+        _ (.position.set light 0.5 1 0.75)
+        ;;light (js/THREE.DirectionalLight. 0xffeedd)
         ;;light (js/THREE.AmbientLight. 0xeeeeff)
         red-sphere (sphere 200 1 1 1000)]
     (.add scene (.-mesh (diamond-floor nil)))
+    (.add scene (.-mesh (diamond-box)))
     (.add scene skybox)
     (doto light
       (.position.set 0 0 1))
@@ -227,4 +265,3 @@
 
 (when-not (repl/alive?)
   (repl/connect "ws://127.0.0.1:9001"))
-
