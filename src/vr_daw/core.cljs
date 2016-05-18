@@ -150,9 +150,13 @@
 
 (def pointer-lock-controls (spacetime/pointer-lock-controls camera))
 
+(def raycaster (THREE.Raycaster. (THREE.Vector3.) (THREE.Vector3. 0 -1 0) 0 10))
+
+(def box1 (diamond-box))
 (defn ^:export init []
   (let [renderer (spacetime/create-renderer)
         render (spacetime/render renderer scene camera)
+        ;;raycaster (THREE.Raycaster. (THREE.Vector3.) (THREE.Vector3. 0 -1 0) 0 10)
         _ (.setClearColor renderer 0xffffff)
         container (-> js/document
                       (.getElementById "ThreeJS"))
@@ -190,10 +194,12 @@
         _ (.position.set light 0.5 1 0.75)
         ;;light (js/THREE.DirectionalLight. 0xffeedd)
         ;;light (js/THREE.AmbientLight. 0xeeeeff)
-        red-sphere (sphere 200 1 1 1000)]
+        red-sphere (sphere 200 1 1 1000)
+        ;;box1 (diamond-box)
+        ]
     (.add scene (.-mesh (diamond-floor nil)))
-    (.add scene (.-mesh (diamond-box)))
-    (.add scene skybox)
+    (.add scene (.-mesh box1))
+    ;;(.add scene skybox)
     (doto light
       (.position.set 0 0 1))
     (.add scene light)
@@ -210,15 +216,13 @@
            can-jump (r/cursor state [:can-jump])]
        (fn [delta-t]
          (let [height 10
-               position-y (nth (spacetime/get-position
-                                pointer-lock-controls)
-                               1)
+               position-y (:y (spacetime/get-position
+                               pointer-lock-controls))
                jump-max  60
                paused? (r/cursor state [:paused?])
                ]
            (render)
            (when-not @paused?
-             (.log js/console "I'm not paused")
              (controls/controls-handler
               #(spacetime/translate-controls! pointer-lock-controls
                                               [-1 0 0])
@@ -240,15 +244,31 @@
              ;; gravity
              (swap! velocity-y (fn [x] (+ x (* -9.8 (/ delta-t 1000)))))
              ;; floor check
-             (when (<= (second (spacetime/get-position pointer-lock-controls))
+             (when (<= (:y (spacetime/get-position pointer-lock-controls))
                        height)
                (spacetime/set-position!
                 pointer-lock-controls
-                [(nth (spacetime/get-position pointer-lock-controls) 0)
+                [(:x (spacetime/get-position pointer-lock-controls))
                  height
-                 (nth (spacetime/get-position pointer-lock-controls) 2)])
+                 (:z (spacetime/get-position pointer-lock-controls))])
                (reset! velocity-y 0)
-               (reset! can-jump true))))))
+               (reset! can-jump true))
+             (.ray.origin.copy raycaster (clj->js (spacetime/get-position pointer-lock-controls)))
+             (aset raycaster "ray" "origin" "y" (- (.-ray.origin.y raycaster ) 10))
+             ;; intersection check
+             (when (> (aget (.intersectObjects
+                             raycaster
+                             ;; (clj->js
+                             ;;  (into []
+                             ;;        (filter #(= (.-type %) "Mesh")
+                             ;;                (.-children scene))))
+                             (clj->js [(.-mesh box1)]))
+                            "length")
+                      0)
+               (.log js/console "I intersected")
+               (reset! velocity-y (js/Math.max 0 velocity-y))
+               (reset! can-jump true))
+             ))))
      (r/cursor state [:request-id]))
     ;; add listeners for key events
     (js/addEventListener "keydown" controls/game-key-down! true)
