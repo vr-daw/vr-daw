@@ -242,7 +242,9 @@
                                              @velocity-y
                                              0])
              ;; gravity
-             (swap! velocity-y (fn [x] (+ x (* -9.8 (/ delta-t 1000)))))
+             (swap! velocity-y (fn [velocity-y] (+ velocity-y
+                                                   (* -9.8 (/ delta-t 1000)))))
+             ;;(.log js/console "velocity-y " @velocity-y)
              ;; floor check
              (when (<= (:y (spacetime/get-position pointer-lock-controls))
                        height)
@@ -253,21 +255,22 @@
                  (:z (spacetime/get-position pointer-lock-controls))])
                (reset! velocity-y 0)
                (reset! can-jump true))
-             (.ray.origin.copy raycaster (clj->js (spacetime/get-position pointer-lock-controls)))
-             (aset raycaster "ray" "origin" "y" (- (.-ray.origin.y raycaster ) 10))
+             ;;(.log js/console "velocity-y " @velocity-y)
+             (.ray.origin.copy raycaster (clj->js (spacetime/get-position
+                                                   pointer-lock-controls)))
+             (aset raycaster "ray" "origin" "y" (- (.-ray.origin.y raycaster )
+                                                   10))
              ;; intersection check
              (when (> (aget (.intersectObjects
                              raycaster
-                             ;; (clj->js
-                             ;;  (into []
-                             ;;        (filter #(= (.-type %) "Mesh")
-                             ;;                (.-children scene))))
                              (clj->js [(.-mesh box1)]))
                             "length")
                       0)
-               (.log js/console "I intersected")
-               (reset! velocity-y (js/Math.max 0 velocity-y))
+               ;;(.log js/console "I intersected")
+               (reset! velocity-y (js/Math.max 0 @velocity-y))
                (reset! can-jump true))
+             (.log js/console (:y (spacetime/get-position pointer-lock-controls)))
+             ;;(.log js/console "velocity-y " @velocity-y)
              ))))
      (r/cursor state [:request-id]))
     ;; add listeners for key events
