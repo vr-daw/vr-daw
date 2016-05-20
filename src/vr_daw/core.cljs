@@ -11,9 +11,10 @@
             [obj-loader]))
 
 (def state (r/atom {:request-id nil
-                    :velocity-y 0
+                    :velocity {:x 0 :y 0 :z 0}
                     :can-jump false
                     :paused? true}))
+(def height 10)
 
 (def request-id (r/cursor state [:request-id]))
 
@@ -139,6 +140,7 @@
 
 (aset scene "fog" (THREE.Fog. 0xffffff 1 750))
 
+
 (def camera (init-camera! (create-perspective-camera
                            75
                            (/ (.-innerWidth js/window)
@@ -150,7 +152,8 @@
 
 (def pointer-lock-controls (spacetime/pointer-lock-controls camera))
 
-(def raycaster (THREE.Raycaster. (THREE.Vector3.) (THREE.Vector3. 0 -1 0) 0 10))
+(def raycaster (THREE.Raycaster. (THREE.Vector3.) (THREE.Vector3. 0 -1 0) 0
+                                 height))
 
 (def box1 (diamond-box))
 (defn ^:export init []
@@ -212,7 +215,10 @@
     (.bindKey js/THREEx.FullScreen (js-obj "charCode" (.charCodeAt "m" 0)))
     (spacetime/fullscreen!)
     (spacetime/start-time-frame-loop
-     (let [velocity-y (r/cursor state [:velocity-y])
+     (let [velocity (r/cursor state [:velocity])
+           velocity-x (r/cursor velocity [:x])
+           velocity-y (r/cursor velocity [:y])
+           velocity-z (r/cursor velocity [:z])
            can-jump (r/cursor state [:can-jump])]
        (fn [delta-t]
          (let [height 10
@@ -224,27 +230,37 @@
            (render)
            (when-not @paused?
              (controls/controls-handler
-              #(spacetime/translate-controls! pointer-lock-controls
-                                              [-1 0 0])
-              #(spacetime/translate-controls! pointer-lock-controls
-                                              [0 0 -1])
-              #(spacetime/translate-controls! pointer-lock-controls
-                                              [1 0 0])
-              #(spacetime/translate-controls! pointer-lock-controls
-                                              [0 0 1])
-              ;; jump!
-              #(when @can-jump
-                 (swap! velocity-y (partial + 3))
-                 (reset! can-jump false)))
-             ;; gravity
+              {:left-fn
+               #(swap! velocity-x (partial - 1))
+               ;; #(spacetime/translate-controls! pointer-lock-controls
+               ;;                                 [-1 0 0])
+               :up-fn
+               #(swap! velocity-z (partial - 1))
+               ;; #(spacetime/translate-controls! pointer-lock-controls
+               ;;                                 [0 0 -1])
+               :right-fn
+               #(swap! velocity-x (partial + 1))
+               ;; #(spacetime/translate-controls! pointer-lock-controls
+               ;;                                 [1 0 0])
+               :down-fn
+               ;; #(spacetime/translate-controls! pointer-lock-controls
+               ;;                                 [0 0 1])
+               #(swap! velocity-z (partial + 1))
+               :space-fn
+               ;; jump!
+               #(when @can-jump
+                  (swap! velocity-y (partial + 3))
+                  (reset! can-jump false))})
+             ;; all velocities
              (spacetime/translate-controls! pointer-lock-controls
-                                            [0
+                                            [@velocity-x
                                              @velocity-y
-                                             0])
-             ;; gravity
+                                             @velocity-z])
+             ;; gravity affect on y velocity
              (swap! velocity-y (fn [velocity-y] (+ velocity-y
                                                    (* -9.8 (/ delta-t 1000)))))
              ;;(.log js/console "velocity-y " @velocity-y)
+             ;; movement affect in the x-y pla
              ;; floor check
              (when (<= (:y (spacetime/get-position pointer-lock-controls))
                        height)
@@ -253,21 +269,27 @@
                 [(:x (spacetime/get-position pointer-lock-controls))
                  height
                  (:z (spacetime/get-position pointer-lock-controls))])
+               ;; no more affect of gravity
                (reset! velocity-y 0)
                (reset! can-jump true))
-             ;;(.log js/console "velocity-y " @velocity-y)
+             ;; set the raycaster to current origin of camera (or controls?)
              (.ray.origin.copy raycaster (clj->js (spacetime/get-position
                                                    pointer-lock-controls)))
-             (aset raycaster "ray" "origin" "y" (- (.-ray.origin.y raycaster )
-                                                   10))
+             ;; put the raycaster origin at your feet
+             (aset raycaster "ray" "origin" "y" (- (aget raycaster
+                                                         "ray"
+                                                         "origin"
+                                                         "y")
+                                                   height))
              ;; intersection check
              (when (> (aget (.intersectObjects
                              raycaster
                              (clj->js [(.-mesh box1)]))
                             "length")
                       0)
-               ;;(.log js/console "I intersected")
-               (reset! velocity-y (js/Math.max 0 @velocity-y))
+               (.log js/console "I intersected")
+               (reset! velocity-y 0;(js/Math.max 0 @velocity-y)
+                       )
                (reset! can-jump true))
              (.log js/console (:y (spacetime/get-position pointer-lock-controls)))
              ;;(.log js/console "velocity-y " @velocity-y)
