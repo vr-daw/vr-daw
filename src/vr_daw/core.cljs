@@ -12,6 +12,7 @@
 
 (def state (r/atom {:request-id nil
                     :velocity {:x 0 :y 0 :z 0}
+                    :momentum {:x 0 :y 0 :z 0}
                     :can-jump false
                     :paused? true}))
 (def height 10)
@@ -152,8 +153,28 @@
 
 (def pointer-lock-controls (spacetime/pointer-lock-controls camera))
 
+(def collision-front (THREE.Raycaster. (THREE.Vector3.)
+                                       (THREE.Vector3. 0 0 -1)
+                                       0
+                                       2))
+
+(def collision-back (THREE.Raycaster. (THREE.Vector3.)
+                                      (THREE.Vector3. 0 0 1)
+                                      0
+                                      2))
+
+(def collision-left (THREE.Raycaster. (THREE.Vector3.)
+                                      (THREE.Vector3. -1 0 0) 0
+                                      5))
+
+(def collision-right (THREE.Raycaster. (THREE.Vector3.)
+                                       (THREE.Vector3. 1 0 0) 0
+                                       5))
+
 (def raycaster (THREE.Raycaster. (THREE.Vector3.) (THREE.Vector3. 0 -1 0) 0
                                  height))
+
+
 
 (def box1 (diamond-box))
 (defn ^:export init []
@@ -219,6 +240,10 @@
            velocity-x (r/cursor velocity [:x])
            velocity-y (r/cursor velocity [:y])
            velocity-z (r/cursor velocity [:z])
+           momentum (r/cursor state [:momentum])
+           momentum-x (r/cursor momentum [:x])
+           momentum-y (r/cursor momentum [:y])
+           momentum-z (r/cursor momentum [:z])
            can-jump (r/cursor state [:can-jump])]
        (fn [delta-t]
          (let [height 10
@@ -231,34 +256,58 @@
            (when-not @paused?
              (controls/controls-handler
               {:left-fn
-               #(swap! velocity-x (partial - 1))
-               ;; #(spacetime/translate-controls! pointer-lock-controls
-               ;;                                 [-1 0 0])
+               ;; #(swap! momentum-x (partial - 2))
+               ;; #(swap! momentum-x #())
+               ;; #(reset! momentum-x  -2)
+               #(spacetime/translate-controls! pointer-lock-controls
+                                               [-1 0 0])
                :up-fn
-               #(swap! velocity-z (partial - 1))
-               ;; #(spacetime/translate-controls! pointer-lock-controls
-               ;;                                 [0 0 -1])
+               ;; #(swap! momentum-z (partial - 2))
+               ;; #(reset! momentum-z  -2)
+               #(spacetime/translate-controls! pointer-lock-controls
+                                               [0 0 -1])
                :right-fn
-               #(swap! velocity-x (partial + 1))
-               ;; #(spacetime/translate-controls! pointer-lock-controls
-               ;;                                 [1 0 0])
+               ;; #(swap! momentum-x (partial + 2))
+               ;; #(reset! momentum-x 2)
+               #(spacetime/translate-controls! pointer-lock-controls
+                                               [1 0 0])
                :down-fn
-               ;; #(spacetime/translate-controls! pointer-lock-controls
-               ;;                                 [0 0 1])
-               #(swap! velocity-z (partial + 1))
+               #(spacetime/translate-controls! pointer-lock-controls
+                                               [0 0 1])
+               ;; #(reset! momentum-z 2)
+               ;; #(swap! momentum-z (partial + 2))
                :space-fn
                ;; jump!
                #(when @can-jump
                   (swap! velocity-y (partial + 3))
                   (reset! can-jump false))})
+             ;; all momentums
+             ;; (swap! momentum-x #(- % (* (js/Math.abs %) (/ delta-t 1000) )))
+             ;; (swap! momentum-z #(- % (* (js/Math.abs %) (/ delta-t 1000) )))
              ;; all velocities
-             (spacetime/translate-controls! pointer-lock-controls
-                                            [@velocity-x
-                                             @velocity-y
-                                             @velocity-z])
-             ;; gravity affect on y velocity
+             ;; (.log js/console "velocity-x" @velocity-x)
+             ;; (.log js/console "momentum-x" @momentum-x)
+             ;; (.log js/console "velocity-y" @velocity-y)
+             ;; (.log js/console "velocity-z" @velocity-z)
+             ;; (.log js/console "momentum-z" @momentum-z)
+             ;; (.log js/console (:x (spacetime/get-position pointer-lock-controls)))
+             ;; (.log js/console delta-t)
+             ;; (swap! momentum-x #(- % (* (js/Math.abs %) (/ delta-t 1000) )))
+             ;; (swap! momentum-z #(- % (* (js/Math.abs %) (/ delta-t 1000) )))
+             ;; (+ @velocity-x (* @momentum-x (/ delta-t 1000)))
+             ;; gravity's affect on velocity-y
              (swap! velocity-y (fn [velocity-y] (+ velocity-y
                                                    (* -9.8 (/ delta-t 1000)))))
+             ;; movement affect on velocities x and z
+             ;; (swap! velocity-x #(+ % (* @momentum-x (/ delta-t 1000))))
+             ;; (swap! velocity-z #(+ % (* @momentum-z (/  delta-t 1000))))
+             ;; velocity move camera
+             (spacetime/translate-controls!
+              pointer-lock-controls [0
+                                     @velocity-y
+                                     0])
+             ;; gravity affect on y velocity
+
              ;;(.log js/console "velocity-y " @velocity-y)
              ;; movement affect in the x-y pla
              ;; floor check
@@ -269,7 +318,7 @@
                 [(:x (spacetime/get-position pointer-lock-controls))
                  height
                  (:z (spacetime/get-position pointer-lock-controls))])
-               ;; no more affect of gravity
+               ;; hit bottom, no more gravity
                (reset! velocity-y 0)
                (reset! can-jump true))
              ;; set the raycaster to current origin of camera (or controls?)
@@ -291,7 +340,9 @@
                (reset! velocity-y 0;(js/Math.max 0 @velocity-y)
                        )
                (reset! can-jump true))
-             (.log js/console (:y (spacetime/get-position pointer-lock-controls)))
+             ;;(.log js/console (:y (spacetime/get-position pointer-lock-controls)))
+
+             ;;(.log js/console @velocity-x)
              ;;(.log js/console "velocity-y " @velocity-y)
              ))))
      (r/cursor state [:request-id]))
