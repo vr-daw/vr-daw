@@ -153,6 +153,7 @@
 
 (def pointer-lock-controls (spacetime/pointer-lock-controls camera))
 
+;; volumetric vectors of collision
 (def collision-front (THREE.Raycaster. (THREE.Vector3.)
                                        (THREE.Vector3. 0 0 -1)
                                        0
@@ -170,6 +171,10 @@
 (def collision-right (THREE.Raycaster. (THREE.Vector3.)
                                        (THREE.Vector3. 1 0 0) 0
                                        5))
+
+(def collision-head (THREE.Raycaster. (THREE.Vector3.)
+                                       (THREE.Vector3. 1 0 0) 0
+                                       1))
 
 (def raycaster (THREE.Raycaster. (THREE.Vector3.) (THREE.Vector3. 0 -1 0) 0
                                  height))
