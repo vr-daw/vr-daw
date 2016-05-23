@@ -173,8 +173,8 @@
                                        5))
 
 (def collision-head (THREE.Raycaster. (THREE.Vector3.)
-                                       (THREE.Vector3. 1 0 0) 0
-                                       1))
+                                      (THREE.Vector3. 1 0 0) 0
+                                      1))
 
 (def raycaster (THREE.Raycaster. (THREE.Vector3.) (THREE.Vector3. 0 -1 0) 0
                                  height))
@@ -228,6 +228,7 @@
         ]
     (.add scene (.-mesh (diamond-floor nil)))
     (.add scene (.-mesh box1))
+    (spacetime/translate-position! (.-mesh box1) [0 0 -20])
     ;;(.add scene skybox)
     (doto light
       (.position.set 0 0 1))
@@ -269,8 +270,13 @@
                :up-fn
                ;; #(swap! momentum-z (partial - 2))
                ;; #(reset! momentum-z  -2)
-               #(spacetime/translate-controls! pointer-lock-controls
-                                               [0 0 -1])
+               #(when-not (> (aget (.intersectObjects
+                                    collision-front
+                                    (clj->js [(.-mesh box1)]))
+                                   "length")
+                             0)
+                  (spacetime/translate-controls! pointer-lock-controls
+                                                 [0 0 -1]))
                :right-fn
                ;; #(swap! momentum-x (partial + 2))
                ;; #(reset! momentum-x 2)
