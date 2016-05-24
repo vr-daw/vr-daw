@@ -275,6 +275,7 @@
                                     (clj->js [(.-mesh box1)]))
                                    "length")
                              0)
+                  (.log js/console "face bump!")
                   (spacetime/translate-controls! pointer-lock-controls
                                                  [0 0 -1]))
                :right-fn
@@ -335,6 +336,10 @@
              ;; set the raycaster to current origin of camera (or controls?)
              (.ray.origin.copy raycaster (clj->js (spacetime/get-position
                                                    pointer-lock-controls)))
+             ;; for the face bump
+             (.ray.origin.copy collision-front
+                               (clj->js (spacetime/get-position
+                                         pointer-lock-controls)))
              ;; put the raycaster origin at your feet
              (aset raycaster "ray" "origin" "y" (- (aget raycaster
                                                          "ray"
