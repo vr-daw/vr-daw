@@ -116,9 +116,7 @@
                      (aset (.-vertexColors %) 1
                            (diamond-color))
                      (aset (.-vertexColors %) 2
-                           (diamond-color))
-                     (.log js/console "I set a color")
-                     )
+                           (diamond-color)))
                 (.-faces geometry)))
         material (js/THREE.MeshPhongMaterial. (clj->js
                                                {:specular 0xffffff
