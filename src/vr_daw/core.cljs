@@ -157,6 +157,21 @@
                                        0
                                        2))
 
+
+(defn raycaster->arrow-helper
+  [raycaster & [{:keys [length color head-length head-width]
+                 :or {length 10
+                      color 0x00ff00
+                      head-length 1
+                      head-width 1}}]]
+  (let [ray       (.-ray raycaster)
+        origin    (.-origin ray)
+        direction (.-direction ray)]
+    (THREE.ArrowHelper. direction origin length color head-length head-length)))
+
+(def collision-front-arrow
+  (atom (raycaster->arrow-helper collision-front)))
+
 (def collision-back (THREE.Raycaster. (THREE.Vector3.)
                                       (THREE.Vector3. 0 0 1)
                                       0
@@ -176,8 +191,6 @@
 
 (def raycaster (THREE.Raycaster. (THREE.Vector3.) (THREE.Vector3. 0 -1 0) 0
                                  height))
-
-
 
 (def box1 (diamond-box))
 (defn ^:export init []
@@ -334,10 +347,15 @@
              ;; set the raycaster to current origin of camera (or controls?)
              (.ray.origin.copy raycaster (clj->js (spacetime/get-position
                                                    pointer-lock-controls)))
-             ;; for the face bump
-             (.ray.origin.copy collision-front
-                               (clj->js (spacetime/get-position
-                                         pointer-lock-controls)))
+             ;; reset the collision front vector
+             (let [camera-direction (.getDirection pointer-lock-controls (THREE.Vector3.))
+                   camera-origin (clj->js (spacetime.core/get-position pointer-lock-controls))]
+               (.ray.direction.copy collision-front camera-direction)
+               (.ray.origin.copy collision-front camera-origin))
+             ;; draw the collision front arrow
+             (.remove scene @collision-front-arrow)
+             (reset! collision-front-arrow (raycaster->arrow-helper collision-front :length 1))
+             (.add scene @collision-front-arrow)
              ;; put the raycaster origin at your feet
              (aset raycaster "ray" "origin" "y" (- (aget raycaster
                                                          "ray"
