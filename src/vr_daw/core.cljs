@@ -170,12 +170,15 @@
     (THREE.ArrowHelper. direction origin length color head-length head-length)))
 
 (def collision-front-arrow
-  (atom (raycaster->arrow-helper collision-front)))
+  (atom (raycaster->arrow-helper collision-front :color 0x00ff00)))
 
 (def collision-back (THREE.Raycaster. (THREE.Vector3.)
                                       (THREE.Vector3. 0 0 1)
                                       0
                                       2))
+
+(def collision-back-arrow
+  (atom (raycaster->arrow-helper collision-front) :color 0x00ff00))
 
 (def collision-left (THREE.Raycaster. (THREE.Vector3.)
                                       (THREE.Vector3. -1 0 0) 0
@@ -192,7 +195,13 @@
 (def raycaster (THREE.Raycaster. (THREE.Vector3.) (THREE.Vector3. 0 -1 0) 0
                                  height))
 
+(def collision-arrows (map #(raycaster->arrow-helper %)
+
+                           ))
+(def track-length-origin (atom 0))
+
 (def box1 (diamond-box))
+
 (defn ^:export init []
   (let [renderer (spacetime/create-renderer)
         render (spacetime/render renderer scene camera)
@@ -350,6 +359,8 @@
              ;; reset the collision front vector
              (let [camera-direction (.getDirection pointer-lock-controls (THREE.Vector3.))
                    camera-origin (clj->js (spacetime.core/get-position pointer-lock-controls))]
+               (.log js/console "camera-direction" camera-direction)
+               (.log js/console "camera-origin" camera-origin)
                (.ray.direction.copy collision-front camera-direction)
                (.ray.origin.copy collision-front camera-origin))
              ;; draw the collision front arrow
@@ -373,14 +384,44 @@
                        )
                (reset! can-jump true))
              ;;(.log js/console (:y (spacetime/get-position pointer-lock-controls)))
-
              ;;(.log js/console @velocity-x)
              ;;(.log js/console "velocity-y " @velocity-y)
+             (.log js/console "atom:" @track-length-origin)
+             (when (= @track-length-origin 0)
+               ;; set rotation back to none
+               (-> camera (.rotation.set 0 0 0 "XYZ"))
+               ;; set origin back to 0
+               (-> camera (.position.set 0 0 0))
+               (.log js/console "1st person view"))
+             (when (> @track-length-origin 0)
+               ;; rotate camera 45 degrees
+               (-> camera (.rotation.set (/ js/Math.PI -4) 0 0 "XYZ"))
+               ;; move camera away from point
+               (-> camera (.position.set 0 (/ @track-length-origin 10)
+                                         (/ @track-length-origin 10)))
+               (.log js/console "3rd person view")
+               )
              ))))
      (r/cursor state [:request-id]))
     ;; add listeners for key events
     (js/addEventListener "keydown" controls/game-key-down! true)
     (js/addEventListener "keyup"   controls/game-key-up!   true)
+    (js/addEventListener "wheel"
+                         (fn [e]
+                           (let [min-track-length 0
+                                 max-track-length 1000]
+                             (when (< (- min-track-length 1)
+                                      @track-length-origin
+                                      (+ max-track-length 1))
+                               (reset! track-length-origin
+                                       (+ (.-deltaY e) @track-length-origin)))
+                             (when-not (< (- min-track-length 1)
+                                          @track-length-origin
+                                          (+ max-track-length 1))
+                               (when (neg? @track-length-origin)
+                                 (reset! track-length-origin min-track-length))
+                               (when (pos? @track-length-origin)
+                                 (reset! track-length-origin max-track-length))))))
     ;; add Reagent
     (r/render-component
      [PauseComponent
